@@ -61,13 +61,19 @@ function txCol()   { return userDoc().collection('transactions'); }
 // Real-time listener — обновляет UI при любом изменении в базе
 function listenTransactions() {
   unsubTx = txCol()
-    .orderBy('createdAt', 'desc')
     .onSnapshot(snap => {
-      transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      transactions = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => {
+          if (b.date !== a.date) return b.date.localeCompare(a.date);
+          const at = a.createdAt?.toMillis?.() ?? 0;
+          const bt = b.createdAt?.toMillis?.() ?? 0;
+          return bt - at;
+        });
       updateSummary();
       renderHistory();
       updateChart();
-    }, err => console.error('Firestore:', err));
+    }, err => console.error('Firestore error:', err));
 }
 
 // ── Транзакции ───────────────────────────────────────────────

@@ -33,9 +33,10 @@ async function loadTransactions() {
   try {
     const snap = await db.collection('users').doc(currentUser.uid)
       .collection('transactions')
-      .orderBy('createdAt', 'desc')
       .get();
-    transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    transactions = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => b.date.localeCompare(a.date));
   } catch (e) {
     console.error('Firestore:', e);
   }
