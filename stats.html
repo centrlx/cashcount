@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CashCount — Статистика</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header>
+  <nav class="nav">
+    <a href="index.html" class="nav-link">Главная</a>
+    <a href="stats.html" class="nav-link nav-link--active">Статистика</a>
+  </nav>
+  <div class="header-right">
+    <span class="user-email" id="userEmail"></span>
+    <button class="logout-btn" onclick="logout()">Выйти</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- Фильтр периода -->
+  <div class="period-tabs">
+    <button class="period-btn active" onclick="setPeriod('all', this)">Всё время</button>
+    <button class="period-btn" onclick="setPeriod('month', this)">Этот месяц</button>
+    <button class="period-btn" onclick="setPeriod('3months', this)">3 месяца</button>
+  </div>
+
+  <!-- Сводка -->
+  <div class="summary-grid">
+    <div class="card balance-card">
+      <div class="card-label">Баланс за период</div>
+      <div class="card-amount" id="statsBalance">₸0</div>
+      <div class="card-sub" id="statsTxCount">0 транзакций</div>
+    </div>
+    <div class="card income-card">
+      <div class="card-label">Доходы за период</div>
+      <div class="card-amount" id="statsIncome">₸0</div>
+      <div class="card-sub" id="statsIncomeCount">0 операций</div>
+    </div>
+    <div class="card expense-card">
+      <div class="card-label">Расходы за период</div>
+      <div class="card-amount" id="statsExpense">₸0</div>
+      <div class="card-sub" id="statsExpenseCount">0 операций</div>
+    </div>
+  </div>
+
+  <!-- Графики -->
+  <div class="charts-grid">
+
+    <div class="card">
+      <div class="section-title">Расходы по категориям</div>
+      <div id="noCatData" class="empty-state" style="display:none">
+        <div class="empty-icon">🗂️</div>
+        <div>Нет расходов за период</div>
+      </div>
+      <div class="chart-wrap" id="catChartWrap">
+        <canvas id="catChart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Динамика по месяцам</div>
+      <div id="noMonthData" class="empty-state" style="display:none">
+        <div class="empty-icon">📅</div>
+        <div>Нет данных</div>
+      </div>
+      <div class="chart-wrap chart-wrap--tall" id="monthChartWrap">
+        <canvas id="monthChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Таблица расходов -->
+  <div class="card" id="catTableCard">
+    <div class="section-title">Детализация расходов</div>
+    <div id="catTable"></div>
+  </div>
+
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase.js"></script>
+<script src="stats.js"></script>
+</body>
+</html>

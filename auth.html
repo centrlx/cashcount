@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CashCount — Вход</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="auth-body">
+
+<div class="auth-wrap">
+
+  <div class="auth-logo">
+    <div class="auth-logo-icon">💰</div>
+    <span>CashCount</span>
+  </div>
+
+  <div class="card auth-card">
+
+    <div class="auth-tabs">
+      <button class="auth-tab auth-tab--active" id="loginTab" onclick="showTab('login')">Войти</button>
+      <button class="auth-tab" id="registerTab" onclick="showTab('register')">Регистрация</button>
+    </div>
+
+    <!-- Форма входа -->
+    <div id="loginForm">
+      <div class="form-group">
+        <div class="field-label"><span>Email</span></div>
+        <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <div class="field-label"><span>Пароль</span></div>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <div class="auth-error" id="loginError"></div>
+      <button class="submit-btn" id="loginBtn" onclick="login()">Войти</button>
+    </div>
+
+    <!-- Форма регистрации -->
+    <div id="registerForm" style="display:none">
+      <div class="form-group">
+        <div class="field-label"><span>Email</span></div>
+        <input type="email" id="regEmail" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <div class="field-label"><span>Пароль</span></div>
+        <input type="password" id="regPassword" placeholder="Минимум 6 символов" autocomplete="new-password" />
+      </div>
+      <div class="form-group">
+        <div class="field-label"><span>Повтор пароля</span></div>
+        <input type="password" id="regPassword2" placeholder="Повторите пароль" autocomplete="new-password" />
+      </div>
+      <div class="auth-error" id="regError"></div>
+      <button class="submit-btn" id="regBtn" onclick="register()">Создать аккаунт</button>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="firebase.js"></script>
+<script src="auth.js"></script>
+</body>
+</html>

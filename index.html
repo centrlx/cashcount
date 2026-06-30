@@ -10,7 +10,14 @@
 <body>
 
 <header>
-  <div class="header-date" id="headerDate"></div>
+  <nav class="nav">
+    <a href="index.html" class="nav-link nav-link--active">Главная</a>
+    <a href="stats.html" class="nav-link">Статистика</a>
+  </nav>
+  <div class="header-right">
+    <span class="user-email" id="userEmail"></span>
+    <button class="logout-btn" onclick="logout()">Выйти</button>
+  </div>
 </header>
 
 <main>
@@ -67,7 +74,6 @@
             <div class="cat-panel-head" id="catPanelHead">Мои категории</div>
             <div class="custom-cat-list" id="customCatList"></div>
             <div class="new-cat-row">
-              <input type="text" id="newCatEmoji" placeholder="😊" maxlength="2" title="Эмодзи" />
               <input type="text" id="newCatName" placeholder="Название категории" maxlength="32" />
               <button class="cat-add-btn" onclick="addCustomCat()">+ Добавить</button>
             </div>
@@ -120,6 +126,10 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase.js"></script>
 <script src="main.js"></script>
 </body>
 </html>

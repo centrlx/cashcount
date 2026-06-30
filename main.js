@@ -1,53 +1,111 @@
 // ── Встроенные категории ─────────────────────────────────────
 const DEFAULT_CATS = {
   income: [
-    { name: 'Зарплата',    emoji: '' },
-    { name: 'Boosty.to',     emoji: '' },
-    { name: 'PayPal',  emoji: '' },
-    { name: 'Криптовалюта',  emoji: '' },
-    { name: 'Подарок',     emoji: '' },
-    { name: 'Перевод на карту',  emoji: '' },
-    { name: 'Другое',      emoji: '' },
+    { name: 'Boosty.to' },
+    { name: 'PayPal' },
+    { name: 'Криптовалюта' },
+    { name: 'Подарок' },
+    { name: 'Перевод на карту' },
+    { name: 'Другое' },
   ],
   expense: [
-    { name: 'Еда и кафе',  emoji: '' },
-    { name: 'Транспорт/Такси',   emoji: '' },
-    { name: 'Сашуля', emoji: '' },
-    { name: 'Одежда',      emoji: '' },
-    { name: 'Подписки',    emoji: '' },
-    { name: 'Развлечения', emoji: '' },
-    { name: 'Алкоголь',       emoji: '' },
-    { name: 'Другое',      emoji: '' },
+    { name: 'Еда и кафе' },
+    { name: 'Транспорт/Такси' },
+    { name: 'Сашуля' },
+    { name: 'Одежда' },
+    { name: 'Подписки' },
+    { name: 'Развлечения' },
+    { name: 'Алкоголь' },
+    { name: 'Другое' },
   ]
 };
 
 // ── Состояние ────────────────────────────────────────────────
+let currentUser  = null;
 let currentType  = 'income';
-let transactions = JSON.parse(localStorage.getItem('cc_tx')   || '[]');
-let customCats   = JSON.parse(localStorage.getItem('cc_cats') || '{"income":[],"expense":[]}');
+let transactions = [];
+let customCats   = { income: [], expense: [] };
 let chart        = null;
 let catPanelOpen = false;
+let unsubTx      = null;
 
-// ── Хелпер: все категории текущего типа ─────────────────────
 function allCats(type) {
   return [...DEFAULT_CATS[type], ...customCats[type]];
 }
 
-// ── Инициализация ────────────────────────────────────────────
-function init() {
+// ── Auth — главная точка входа ───────────────────────────────
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'auth.html'; return; }
+
+  currentUser = user;
+  document.getElementById('userEmail').textContent = user.email;
   document.getElementById('headerDate').textContent = new Date().toLocaleDateString('ru-RU', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
   document.getElementById('date').value = todayISO();
+
+  await loadCustomCats();
   updateCategoryList();
-  updateSummary();
-  renderHistory();
-  updateChart();
+  listenTransactions();
+});
+
+function logout() {
+  if (unsubTx) unsubTx();
+  auth.signOut().then(() => { window.location.href = 'auth.html'; });
 }
 
-function todayISO() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+// ── Firestore ────────────────────────────────────────────────
+function userDoc() { return db.collection('users').doc(currentUser.uid); }
+function txCol()   { return userDoc().collection('transactions'); }
+
+// Real-time listener — обновляет UI при любом изменении в базе
+function listenTransactions() {
+  unsubTx = txCol()
+    .orderBy('createdAt', 'desc')
+    .onSnapshot(snap => {
+      transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      updateSummary();
+      renderHistory();
+      updateChart();
+    }, err => console.error('Firestore:', err));
+}
+
+// ── Транзакции ───────────────────────────────────────────────
+async function addTransaction() {
+  const amount   = parseFloat(document.getElementById('amount').value);
+  const category = document.getElementById('category').value;
+  const date     = document.getElementById('date').value;
+  const note     = document.getElementById('note').value.trim();
+
+  if (!amount || amount <= 0) { showToast('Введите корректную сумму', 'error'); return; }
+  if (!date)                  { showToast('Выберите дату', 'error');            return; }
+
+  try {
+    await txCol().add({
+      type: currentType,
+      amount,
+      category,
+      date,
+      note,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('amount').value = '';
+    document.getElementById('note').value   = '';
+    showToast((currentType === 'income' ? '+' : '−') + fmt(amount) + ' — ' + category, 'success');
+  } catch (e) {
+    showToast('Ошибка сохранения', 'error');
+    console.error(e);
+  }
+}
+
+async function deleteTx(id) {
+  try {
+    await txCol().doc(id).delete();
+    showToast('Транзакция удалена', 'error');
+  } catch (e) {
+    showToast('Ошибка удаления', 'error');
+    console.error(e);
+  }
 }
 
 // ── Тип транзакции ───────────────────────────────────────────
@@ -61,114 +119,65 @@ function setType(type) {
 
 function updateCategoryList() {
   document.getElementById('category').innerHTML =
-    allCats(currentType).map(c => `<option value="${c.name}">${c.emoji} ${c.name}</option>`).join('');
+    allCats(currentType).map(c => `<option value="${c.name}">${c.name}</option>`).join('');
 }
 
-// ── Панель своих категорий ───────────────────────────────────
+// ── Кастомные категории ──────────────────────────────────────
+async function loadCustomCats() {
+  try {
+    const snap = await userDoc().get();
+    if (snap.exists && snap.data().customCats) {
+      customCats = snap.data().customCats;
+    }
+  } catch (e) { console.error(e); }
+}
+
+async function saveCats() {
+  await userDoc().set({ customCats }, { merge: true });
+}
+
 function toggleCatPanel() {
   catPanelOpen = !catPanelOpen;
-  const panel = document.getElementById('catPanel');
-  if (catPanelOpen) {
-    panel.classList.add('open');
-    renderCatPanel();
-  } else {
-    panel.classList.remove('open');
-  }
+  document.getElementById('catPanel').classList.toggle('open', catPanelOpen);
+  if (catPanelOpen) renderCatPanel();
 }
 
 function renderCatPanel() {
   const typeLabel = currentType === 'income' ? 'доходов' : 'расходов';
   document.getElementById('catPanelHead').textContent = `Мои категории (${typeLabel})`;
 
-  const list = document.getElementById('customCatList');
   const cats = customCats[currentType];
-
-  if (cats.length === 0) {
-    list.innerHTML = `<div class="no-custom">Своих категорий пока нет</div>`;
-    return;
-  }
-
-  list.innerHTML = cats.map((c, i) => `
-    <div class="custom-cat-item">
-      <span>${c.emoji} ${escHtml(c.name)}</span>
-      <button class="cat-del-btn" onclick="deleteCustomCat(${i})" title="Удалить">✕</button>
-    </div>
-  `).join('');
+  document.getElementById('customCatList').innerHTML = cats.length === 0
+    ? `<div class="no-custom">Своих категорий пока нет</div>`
+    : cats.map((c, i) => `
+        <div class="custom-cat-item">
+          <span>${escHtml(c.name)}</span>
+          <button class="cat-del-btn" onclick="deleteCustomCat(${i})" title="Удалить">✕</button>
+        </div>`).join('');
 }
 
-function addCustomCat() {
-  const emojiRaw = document.getElementById('newCatEmoji').value.trim();
-  const name     = document.getElementById('newCatName').value.trim();
-
+async function addCustomCat() {
+  const name = document.getElementById('newCatName').value.trim();
   if (!name) { showToast('Введите название категории', 'error'); return; }
-
-  const emoji = emojiRaw || '🏷️';
-
   if (allCats(currentType).some(c => c.name.toLowerCase() === name.toLowerCase())) {
-    showToast('Такая категория уже есть', 'error');
-    return;
+    showToast('Такая категория уже есть', 'error'); return;
   }
-
-  customCats[currentType].push({ name, emoji });
-  saveCats();
+  customCats[currentType].push({ name });
+  await saveCats();
   updateCategoryList();
   renderCatPanel();
-
-  document.getElementById('category').value   = name;
-  document.getElementById('newCatEmoji').value = '';
-  document.getElementById('newCatName').value  = '';
-
+  document.getElementById('category').value  = name;
+  document.getElementById('newCatName').value = '';
   showToast(`Категория «${name}» добавлена`, 'success');
 }
 
-function deleteCustomCat(index) {
+async function deleteCustomCat(index) {
   const cat = customCats[currentType][index];
   customCats[currentType].splice(index, 1);
-  saveCats();
+  await saveCats();
   updateCategoryList();
   renderCatPanel();
   showToast(`Категория «${cat.name}» удалена`, 'error');
-}
-
-function saveCats() {
-  localStorage.setItem('cc_cats', JSON.stringify(customCats));
-}
-
-// ── Добавление транзакции ────────────────────────────────────
-function addTransaction() {
-  const amount   = parseFloat(document.getElementById('amount').value);
-  const category = document.getElementById('category').value;
-  const date     = document.getElementById('date').value;
-  const note     = document.getElementById('note').value.trim();
-
-  if (!amount || amount <= 0) { showToast('Введите корректную сумму', 'error'); return; }
-  if (!date)                  { showToast('Выберите дату', 'error');            return; }
-
-  const emoji = allCats(currentType).find(c => c.name === category)?.emoji ?? '💰';
-
-  transactions.unshift({ id: Date.now(), type: currentType, amount, category, date, note, emoji });
-  saveTx();
-  updateSummary();
-  renderHistory();
-  updateChart();
-
-  document.getElementById('amount').value = '';
-  document.getElementById('note').value   = '';
-
-  showToast((currentType === 'income' ? '+' : '−') + fmt(amount) + ' — ' + category, 'success');
-}
-
-function deleteTx(id) {
-  transactions = transactions.filter(t => t.id !== id);
-  saveTx();
-  updateSummary();
-  renderHistory();
-  updateChart();
-  showToast('Транзакция удалена', 'error');
-}
-
-function saveTx() {
-  localStorage.setItem('cc_tx', JSON.stringify(transactions));
 }
 
 // ── Сводка ───────────────────────────────────────────────────
@@ -206,13 +215,13 @@ function renderHistory() {
 
   list.innerHTML = filtered.map(tx => `
     <div class="tx-item">
-      <div class="tx-icon ${tx.type}">${tx.emoji}</div>
+      <div class="tx-icon ${tx.type}">${escHtml(tx.category.charAt(0).toUpperCase())}</div>
       <div class="tx-info">
         <div class="tx-cat">${escHtml(tx.category)}</div>
         <div class="tx-meta">${fmtDate(tx.date)}${tx.note ? ' · ' + escHtml(tx.note) : ''}</div>
       </div>
       <div class="tx-amount ${tx.type}">${tx.type === 'income' ? '+' : '−'}${fmt(tx.amount)}</div>
-      <button class="tx-del" onclick="deleteTx(${tx.id})" title="Удалить">✕</button>
+      <button class="tx-del" onclick="deleteTx('${tx.id}')" title="Удалить">✕</button>
     </div>
   `).join('');
 }
@@ -227,26 +236,21 @@ const CHART_COLORS = [
 function updateChart() {
   const expenses = transactions.filter(t => t.type === 'expense');
   const card     = document.getElementById('chartCard');
-
   if (expenses.length === 0) { card.style.display = 'none'; return; }
   card.style.display = 'block';
 
   const grouped = {};
   expenses.forEach(t => { grouped[t.category] = (grouped[t.category] || 0) + t.amount; });
 
-  const labels = Object.keys(grouped);
-  const data   = Object.values(grouped);
-
   if (chart) chart.destroy();
-
   chart = new Chart(document.getElementById('expenseChart'), {
     type: 'doughnut',
     data: {
-      labels,
+      labels: Object.keys(grouped),
       datasets: [{
-        data,
-        backgroundColor: CHART_COLORS.slice(0, labels.length),
-        borderColor: '#161b22',
+        data: Object.values(grouped),
+        backgroundColor: CHART_COLORS.slice(0, Object.keys(grouped).length),
+        borderColor: '#0e1117',
         borderWidth: 3,
       }]
     },
@@ -260,9 +264,7 @@ function updateChart() {
           labels: { color: '#8b949e', font: { size: 11 }, padding: 10, boxWidth: 12 }
         },
         tooltip: {
-          callbacks: {
-            label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed)}`
-          }
+          callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed)}` }
         }
       }
     }
@@ -270,6 +272,11 @@ function updateChart() {
 }
 
 // ── Утилиты ──────────────────────────────────────────────────
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 function fmt(n) {
   return '₸' + Math.abs(n).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
@@ -283,9 +290,9 @@ function fmtDate(str) {
 function noun(n, one, few, many) {
   const abs = Math.abs(n) % 100;
   const mod = abs % 10;
-  if (abs >= 11 && abs <= 19)    return `${n} ${many}`;
-  if (mod === 1)                 return `${n} ${one}`;
-  if (mod >= 2 && mod <= 4)      return `${n} ${few}`;
+  if (abs >= 11 && abs <= 19) return `${n} ${many}`;
+  if (mod === 1)              return `${n} ${one}`;
+  if (mod >= 2 && mod <= 4)  return `${n} ${few}`;
   return `${n} ${many}`;
 }
 
@@ -304,12 +311,9 @@ function showToast(msg, type = 'success') {
   toastTimer = setTimeout(() => { t.className = `toast ${type}`; }, 2800);
 }
 
-// Enter → добавить (кроме текстовых полей в панели категорий)
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   const id = document.activeElement?.id;
-  if (id === 'note' || id === 'newCatName' || id === 'newCatEmoji') return;
+  if (id === 'note' || id === 'newCatName') return;
   addTransaction();
 });
-
-init();
