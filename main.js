@@ -35,9 +35,6 @@ function allCats(type) {
 
 // Категории и дата — сразу при загрузке скрипта
 document.getElementById('date').value = todayISO();
-document.getElementById('headerDate').textContent = new Date().toLocaleDateString('ru-RU', {
-  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-});
 updateCategoryList();
 
 // ── Auth — главная точка входа ───────────────────────────────
@@ -71,7 +68,7 @@ async function loadTransactions() {
     updateChart();
   } catch (e) {
     console.error('Firestore error:', e);
-    showToast('Ошибка Firestore: ' + e.code, 'error');
+    showToast('Ошибка Firestore: ' + (e.code || e.message), 'error');
   }
 }
 
@@ -99,7 +96,7 @@ async function addTransaction() {
     showToast((currentType === 'income' ? '+' : '−') + fmt(amount) + ' — ' + category, 'success');
     await loadTransactions();
   } catch (e) {
-    showToast('Ошибка: ' + e.code, 'error');
+    showToast('Ошибка: ' + (e.code || e.message), 'error');
     console.error(e);
   }
 }
@@ -110,7 +107,7 @@ async function deleteTx(id) {
     showToast('Транзакция удалена', 'error');
     await loadTransactions();
   } catch (e) {
-    showToast('Ошибка: ' + e.code, 'error');
+    showToast('Ошибка: ' + (e.code || e.message), 'error');
     console.error(e);
   }
 }
