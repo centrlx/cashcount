@@ -1,24 +1,23 @@
 // ── Встроенные категории ─────────────────────────────────────
 const DEFAULT_CATS = {
   income: [
-    { name: 'Зарплата',    emoji: '💼' },
-    { name: 'Фриланс',     emoji: '💻' },
-    { name: 'Инвестиции',  emoji: '📈' },
-    { name: 'Подработка',  emoji: '🔧' },
-    { name: 'Подарок',     emoji: '🎁' },
-    { name: 'Другое',      emoji: '💰' },
+    { name: 'Зарплата',    emoji: '' },
+    { name: 'Boosty.to',     emoji: '' },
+    { name: 'PayPal',  emoji: '' },
+    { name: 'Криптовалюта',  emoji: '' },
+    { name: 'Подарок',     emoji: '' },
+    { name: 'Перевод на карту',  emoji: '' },
+    { name: 'Другое',      emoji: '' },
   ],
   expense: [
-    { name: 'Продукты',    emoji: '🛒' },
-    { name: 'Еда и кафе',  emoji: '🍕' },
-    { name: 'Транспорт',   emoji: '🚗' },
-    { name: 'Жильё / ЖКХ', emoji: '🏠' },
-    { name: 'Одежда',      emoji: '👕' },
-    { name: 'Здоровье',    emoji: '💊' },
-    { name: 'Развлечения', emoji: '🎬' },
-    { name: 'Связь',       emoji: '📱' },
-    { name: 'Образование', emoji: '📚' },
-    { name: 'Другое',      emoji: '📦' },
+    { name: 'Еда и кафе',  emoji: '' },
+    { name: 'Транспорт/Такси',   emoji: '' },
+    { name: 'Сашуля', emoji: '' },
+    { name: 'Одежда',      emoji: '' },
+    { name: 'Подписки',    emoji: '' },
+    { name: 'Развлечения', emoji: '' },
+    { name: 'Алкоголь',       emoji: '' },
+    { name: 'Другое',      emoji: '' },
   ]
 };
 
