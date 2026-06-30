@@ -46,10 +46,11 @@ auth.onAuthStateChanged(async user => {
 
   await loadCustomCats();
   updateCategoryList();
-  await loadTransactions();
+  listenTransactions();
 });
 
 function logout() {
+  if (unsubTx) unsubTx();
   auth.signOut().then(() => { window.location.href = 'auth.html'; });
 }
 
@@ -57,19 +58,24 @@ function logout() {
 function userDoc() { return db.collection('users').doc(currentUser.uid); }
 function txCol()   { return userDoc().collection('transactions'); }
 
-async function loadTransactions() {
-  try {
-    const snap = await txCol().get();
+function listenTransactions() {
+  if (unsubTx) unsubTx();
+  unsubTx = txCol().onSnapshot(snap => {
     transactions = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => b.date.localeCompare(a.date));
+      .sort((a, b) => {
+        if (b.date !== a.date) return b.date.localeCompare(a.date);
+        const at = a.createdAt?.toMillis?.() ?? 0;
+        const bt = b.createdAt?.toMillis?.() ?? 0;
+        return bt - at;
+      });
     updateSummary();
     renderHistory();
     updateChart();
-  } catch (e) {
-    console.error('Firestore error:', e);
-    showToast('Ошибка Firestore: ' + (e.code || e.message), 'error');
-  }
+  }, err => {
+    console.error('Firestore error:', err);
+    showToast('Ошибка Firestore: ' + (err.code || err.message), 'error');
+  });
 }
 
 // ── Транзакции ───────────────────────────────────────────────
@@ -94,7 +100,6 @@ async function addTransaction() {
     document.getElementById('amount').value = '';
     document.getElementById('note').value   = '';
     showToast((currentType === 'income' ? '+' : '−') + fmt(amount) + ' — ' + category, 'success');
-    await loadTransactions();
   } catch (e) {
     showToast('Ошибка: ' + (e.code || e.message), 'error');
     console.error(e);
@@ -105,7 +110,6 @@ async function deleteTx(id) {
   try {
     await txCol().doc(id).delete();
     showToast('Транзакция удалена', 'error');
-    await loadTransactions();
   } catch (e) {
     showToast('Ошибка: ' + (e.code || e.message), 'error');
     console.error(e);
