@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CashCount — Учёт личных финансов</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">💰</div>
+    CashCount
+  </div>
+  <div class="header-date" id="headerDate"></div>
+</header>
+
+<main>
+
+  <!-- Сводка -->
+  <div class="summary-grid">
+    <div class="card balance-card">
+      <div class="card-label">Общий баланс</div>
+      <div class="card-amount" id="totalBalance">₸0</div>
+      <div class="card-sub" id="txCount">0 транзакций</div>
+    </div>
+    <div class="card income-card">
+      <div class="card-label">Доходы</div>
+      <div class="card-amount" id="totalIncome">₸0</div>
+      <div class="card-sub" id="incomeCount">0 операций</div>
+    </div>
+    <div class="card expense-card">
+      <div class="card-label">Расходы</div>
+      <div class="card-amount" id="totalExpense">₸0</div>
+      <div class="card-sub" id="expenseCount">0 операций</div>
+    </div>
+  </div>
+
+  <div class="content-grid">
+
+    <!-- Левая колонка -->
+    <div style="display:grid;gap:20px">
+
+      <!-- Форма -->
+      <div class="card">
+        <div class="section-title">Добавить транзакцию</div>
+
+        <div class="type-toggle">
+          <button class="type-btn active-income" id="incomeBtn" onclick="setType('income')">↑ Доход</button>
+          <button class="type-btn" id="expenseBtn" onclick="setType('expense')">↓ Расход</button>
+        </div>
+
+        <div class="form-group">
+          <div class="field-label"><span>Сумма</span></div>
+          <div class="amount-wrap">
+            <span class="currency-sym">₸</span>
+            <input type="number" id="amount" placeholder="0.00" min="0.01" step="0.01" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="field-label">
+            <span>Категория</span>
+            <button class="add-cat-btn" onclick="toggleCatPanel()">⊕ Свои категории</button>
+          </div>
+          <select id="category"></select>
+
+          <div class="cat-panel" id="catPanel">
+            <div class="cat-panel-head" id="catPanelHead">Мои категории</div>
+            <div class="custom-cat-list" id="customCatList"></div>
+            <div class="new-cat-row">
+              <input type="text" id="newCatEmoji" placeholder="😊" maxlength="2" title="Эмодзи" />
+              <input type="text" id="newCatName" placeholder="Название категории" maxlength="32" />
+              <button class="cat-add-btn" onclick="addCustomCat()">+ Добавить</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="field-label"><span>Дата</span></div>
+          <input type="date" id="date" />
+        </div>
+
+        <div class="form-group">
+          <div class="field-label"><span>Заметка (необязательно)</span></div>
+          <input type="text" id="note" placeholder="Добавить описание..." />
+        </div>
+
+        <button class="submit-btn" onclick="addTransaction()">Добавить транзакцию</button>
+      </div>
+
+      <!-- Диаграмма -->
+      <div class="card" id="chartCard" style="display:none">
+        <div class="section-title">Расходы по категориям</div>
+        <div class="chart-wrap">
+          <canvas id="expenseChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- История -->
+    <div class="card">
+      <div class="history-header">
+        <div class="section-title" style="margin-bottom:0">История операций</div>
+        <select class="filter-sel" id="filterSel" onchange="renderHistory()">
+          <option value="all">Все</option>
+          <option value="income">Доходы</option>
+          <option value="expense">Расходы</option>
+        </select>
+      </div>
+      <div class="tx-list" id="txList">
+        <div class="empty-state">
+          <div class="empty-icon">📊</div>
+          <div>Добавьте первую транзакцию!</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="main.js"></script>
+</body>
+</html>
