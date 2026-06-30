@@ -30,8 +30,17 @@ let catPanelOpen = false;
 let unsubTx      = null;
 
 function allCats(type) {
-  return [...DEFAULT_CATS[type], ...customCats[type]];
+  return [...DEFAULT_CATS[type], ...(customCats[type] || [])];
 }
+
+// Показываем категории сразу, не ждём Firebase
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('date').value = todayISO();
+  document.getElementById('headerDate').textContent = new Date().toLocaleDateString('ru-RU', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+  updateCategoryList();
+});
 
 // ── Auth — главная точка входа ───────────────────────────────
 auth.onAuthStateChanged(async user => {
@@ -39,10 +48,6 @@ auth.onAuthStateChanged(async user => {
 
   currentUser = user;
   document.getElementById('userEmail').textContent = user.email;
-  document.getElementById('headerDate').textContent = new Date().toLocaleDateString('ru-RU', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-  });
-  document.getElementById('date').value = todayISO();
 
   await loadCustomCats();
   updateCategoryList();
@@ -73,7 +78,10 @@ function listenTransactions() {
       updateSummary();
       renderHistory();
       updateChart();
-    }, err => console.error('Firestore error:', err));
+    }, err => {
+      console.error('Firestore error:', err);
+      showToast('Ошибка Firestore: ' + err.code, 'error');
+    });
 }
 
 // ── Транзакции ───────────────────────────────────────────────
