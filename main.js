@@ -33,14 +33,12 @@ function allCats(type) {
   return [...DEFAULT_CATS[type], ...(customCats[type] || [])];
 }
 
-// Показываем категории сразу, не ждём Firebase
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('date').value = todayISO();
-  document.getElementById('headerDate').textContent = new Date().toLocaleDateString('ru-RU', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-  });
-  updateCategoryList();
+// Категории и дата — сразу при загрузке скрипта
+document.getElementById('date').value = todayISO();
+document.getElementById('headerDate').textContent = new Date().toLocaleDateString('ru-RU', {
+  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
 });
+updateCategoryList();
 
 // ── Auth — главная точка входа ───────────────────────────────
 auth.onAuthStateChanged(async user => {
@@ -51,11 +49,10 @@ auth.onAuthStateChanged(async user => {
 
   await loadCustomCats();
   updateCategoryList();
-  listenTransactions();
+  await loadTransactions();
 });
 
 function logout() {
-  if (unsubTx) unsubTx();
   auth.signOut().then(() => { window.location.href = 'auth.html'; });
 }
 
@@ -63,25 +60,19 @@ function logout() {
 function userDoc() { return db.collection('users').doc(currentUser.uid); }
 function txCol()   { return userDoc().collection('transactions'); }
 
-// Real-time listener — обновляет UI при любом изменении в базе
-function listenTransactions() {
-  unsubTx = txCol()
-    .onSnapshot(snap => {
-      transactions = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => {
-          if (b.date !== a.date) return b.date.localeCompare(a.date);
-          const at = a.createdAt?.toMillis?.() ?? 0;
-          const bt = b.createdAt?.toMillis?.() ?? 0;
-          return bt - at;
-        });
-      updateSummary();
-      renderHistory();
-      updateChart();
-    }, err => {
-      console.error('Firestore error:', err);
-      showToast('Ошибка Firestore: ' + err.code, 'error');
-    });
+async function loadTransactions() {
+  try {
+    const snap = await txCol().get();
+    transactions = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+    updateSummary();
+    renderHistory();
+    updateChart();
+  } catch (e) {
+    console.error('Firestore error:', e);
+    showToast('Ошибка Firestore: ' + e.code, 'error');
+  }
 }
 
 // ── Транзакции ───────────────────────────────────────────────
@@ -106,8 +97,9 @@ async function addTransaction() {
     document.getElementById('amount').value = '';
     document.getElementById('note').value   = '';
     showToast((currentType === 'income' ? '+' : '−') + fmt(amount) + ' — ' + category, 'success');
+    await loadTransactions();
   } catch (e) {
-    showToast('Ошибка сохранения', 'error');
+    showToast('Ошибка: ' + e.code, 'error');
     console.error(e);
   }
 }
@@ -116,8 +108,9 @@ async function deleteTx(id) {
   try {
     await txCol().doc(id).delete();
     showToast('Транзакция удалена', 'error');
+    await loadTransactions();
   } catch (e) {
-    showToast('Ошибка удаления', 'error');
+    showToast('Ошибка: ' + e.code, 'error');
     console.error(e);
   }
 }
